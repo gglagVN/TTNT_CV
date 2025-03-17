@@ -5,19 +5,64 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tìm đường đi ngắn nhất - Cờ vua</title>
     <style>
+        /* Responsive styles */
+        :root {
+            --cell-size: 60px;
+            --font-size-piece: 40px;
+        }
+
+        @media (max-width: 768px) {
+            :root {
+                --cell-size: 45px;
+                --font-size-piece: 30px;
+            }
+            .container {
+                padding: 10px;
+            }
+            h1 {
+                font-size: 20px;
+            }
+            .controls button {
+                font-size: 14px;
+                padding: 8px 15px;
+                margin: 5px;
+            }
+            .piece-option {
+                font-size: 24px;
+                padding: 3px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            :root {
+                --cell-size: 35px;
+                --font-size-piece: 24px;
+            }
+            .piece-selector {
+                flex-wrap: wrap;
+            }
+            .controls {
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+                align-items: center;
+            }
+        }
+
         .chess-board {
             display: grid;
-            grid-template-columns: repeat(8, 60px);
+            grid-template-columns: repeat(8, var(--cell-size));
             gap: 1px;
             background-color: #333;
             padding: 10px;
             border-radius: 5px;
             margin: 20px auto;
+            touch-action: manipulation;
         }
 
         .cell {
-            width: 60px;
-            height: 60px;
+            width: var(--cell-size);
+            height: var(--cell-size);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -56,32 +101,12 @@
             text-align: center;
         }
 
-        button {
-            padding: 10px 20px;
-            margin: 10px;
-            font-size: 16px;
-            cursor: pointer;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-        }
-
-        button:hover {
-            background-color: #45a049;
-        }
-
-        .info {
-            margin: 20px;
-            font-size: 18px;
-        }
-
         .piece {
-            font-size: 40px;
+            font-size: var(--font-size-piece);
             position: absolute;
-            transition: all 0.5s ease;
-            cursor: move;
+            transition: all 0.3s ease;
             user-select: none;
+            -webkit-user-select: none;
         }
 
         .moving-piece {
@@ -96,34 +121,35 @@
             padding: 10px;
             background: #f5f5f5;
             border-radius: 5px;
+            flex-wrap: wrap;
         }
 
         .piece-option {
             font-size: 30px;
             cursor: pointer;
-            padding: 5px 10px;
+            padding: 5px;
             border-radius: 5px;
             display: flex;
             flex-direction: column;
             align-items: center;
+            touch-action: manipulation;
         }
 
-        .piece-option:hover {
-            background-color: #ddd;
-        }
-
-        .piece-name {
-            font-size: 12px;
-            margin-top: 5px;
+        .controls button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            touch-action: manipulation;
         }
 
         @keyframes bounce {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-10px); }
-        }
-
-        .controls {
-            margin: 20px;
         }
     </style>
 </head>
@@ -161,7 +187,6 @@
             <button onclick="resetBoard()">Đặt lại bàn cờ</button>
             <button onclick="clearPath()">Xóa đường đi</button>
         </div>
-        
         <div class="info">
             <p id="status">Chọn một quân cờ để tìm đường đi</p>
         </div>
@@ -177,35 +202,6 @@
         let addingObstacles = false;
         let pathfindingPiece = null;
         let obstacleButtonActive = false;
-
-        // Khởi tạo bàn cờ
-        function toggleObstacles() {
-    const obstacleButton = document.getElementById('obstacleButton');
-    obstacleButtonActive = !obstacleButtonActive;
-    addingObstacles = obstacleButtonActive;
-    
-    if (obstacleButtonActive) {
-        obstacleButton.style.backgroundColor = '#f44336';
-        obstacleButton.textContent = 'Thoát chế độ thêm vật cản';
-        document.getElementById('status').textContent = 'Click để thêm vật cản';
-        clearHighlights(); // Xóa các ô được highlight khi vào chế độ thêm vật cản
-    } else {
-        obstacleButton.style.backgroundColor = '#4CAF50';
-        obstacleButton.textContent = 'Thêm vật cản';
-        // Kiểm tra trạng thái hiện tại để hiển thị thông báo phù hợp
-        if (pathfindingPiece) {
-            if (startPos && !endPos) {
-                document.getElementById('status').textContent = 'Chọn điểm đích';
-            } else if (!startPos) {
-                document.getElementById('status').textContent = 
-                    `Chọn điểm bắt đầu cho quân ${pathfindingPiece}`;
-            }
-        } else {
-            document.getElementById('status').textContent = 
-                'Chọn một quân cờ để tìm đường đi';
-        }
-    }
-}
 
         function initializeBoard() {
             const boardElement = document.getElementById('board');
@@ -244,184 +240,96 @@
         }
 
         function selectPieceForPath(piece) {
-        // Reset bàn cờ khi chọn quân cờ mới
-        resetBoard();
-        
-        // Tắt chế độ thêm vật cản nếu đang bật
-        if (obstacleButtonActive) {
-            toggleObstacles();
+            resetBoard();
+            if (obstacleButtonActive) {
+                toggleObstacles();
+            }
+            pathfindingPiece = piece;
+            document.getElementById('status').textContent = `Chọn điểm bắt đầu cho quân ${piece}`;
         }
-        
-        pathfindingPiece = piece;
-        document.getElementById('status').textContent = `Chọn điểm bắt đầu cho quân ${piece}`;
-    }
 
-        function addObstacles() {
-            addingObstacles = true;
-            pathfindingPiece = null;
-            document.getElementById('status').textContent = 'Click để thêm vật cản';
+        function toggleObstacles() {
+            const obstacleButton = document.getElementById('obstacleButton');
+            obstacleButtonActive = !obstacleButtonActive;
+            addingObstacles = obstacleButtonActive;
+
+            if (obstacleButtonActive) {
+                obstacleButton.style.backgroundColor = '#f44336';
+                obstacleButton.textContent = 'Thoát chế độ thêm vật cản';
+                document.getElementById('status').textContent = 'Click để thêm vật cản';
+                clearHighlights();
+            } else {
+                obstacleButton.style.backgroundColor = '#4CAF50';
+                obstacleButton.textContent = 'Thêm vật cản';
+                if (pathfindingPiece) {
+                    if (startPos && !endPos) {
+                        document.getElementById('status').textContent = 'Chọn điểm đích';
+                    } else if (!startPos) {
+                        document.getElementById('status').textContent = 
+                            `Chọn điểm bắt đầu cho quân ${pathfindingPiece}`;
+                    }
+                } else {
+                    document.getElementById('status').textContent = 
+                        'Chọn một quân cờ để tìm đường đi';
+                }
+            }
         }
 
         function cellClick(row, col) {
-    if (addingObstacles) {
-        addPiece(row, col, '♟');
-        return;
-    }
-
-    if (!pathfindingPiece) {
-        document.getElementById('status').textContent = 'Hãy chọn một quân cờ trước';
-        return;
-    }
-
-    if (!startPos) {
-        // Kiểm tra vị trí không hợp lệ cho quân tốt
-        if (pathfindingPiece === '♙' && isPawnInvalidRow(row)) {
-            document.getElementById('status').textContent = 
-                'Không thể đặt tốt vào hàng ngang đầu hoặc cuối !';
-            return;
-        }
-        startPos = { row, col };
-        addPiece(row, col, pathfindingPiece);
-        document.getElementById('status').textContent = 'Chọn điểm đích';
-    } else if (!endPos) {
-        endPos = { row, col };
-        board[row][col].classList.add('selected');
-        findPath();
-    }
-}
-function updateMouseHoverState() {
-    const cells = document.querySelectorAll('.cell');
-    cells.forEach(cell => {
-        if (addingObstacles) {
-            cell.style.cursor = 'pointer';
-        } else {
-            cell.style.cursor = 'default';
-        }
-    });
-}
-        function getPieceMoves(piece, row, col) {
-            const moves = [];
-            switch (piece) {
-                case '♔': // Vua
-                    for (let dr = -1; dr <= 1; dr++) {
-                        for (let dc = -1; dc <= 1; dc++) {
-                            if (dr !== 0 || dc !== 0) {
-                                moves.push([dr, dc]);
-                            }
-                        }
-                    }
-                    break;
-                case '♕': // Hậu
-                    // Đường thẳng
-                    for (let i = -7; i <= 7; i++) {
-                        if (i !== 0) {
-                            moves.push([i, 0], [0, i], [i, i], [i, -i]);
-                        }
-                    }
-                    break;
-                case '♖': // Xe
-                    for (let i = -7; i <= 7; i++) {
-                        if (i !== 0) {
-                            moves.push([i, 0], [0, i]);
-                        }
-                    }
-                    break;
-                case '♗': // Tượng
-                    for (let i = -7; i <= 7; i++) {
-                        if (i !== 0) {
-                            moves.push([i, i], [i, -i]);
-                        }
-                    }
-                    break;
-                case '♘': // Mã
-                    moves.push(
-                        [-2, -1], [-2, 1], [-1, -2], [-1, 2],
-                        [1, -2], [1, 2], [2, -1], [2, 1]
-                    );
-                    break;
-                case '♙': // Tốt
-                    moves.push([-1, 0]);
-                    break;
+            if (addingObstacles) {
+                addPiece(row, col, '♟');
+                return;
             }
-            return moves;
-        }
 
-        function isValidMove(row, col) {
-            if (row < 0 || row >= 8 || col < 0 || col >= 8) return false;
-            const key = `${row},${col}`;
-            if (endPos && row === endPos.row && col === endPos.col) return true;
-            return !pieces.has(key);
-        }
+            if (!pathfindingPiece) {
+                document.getElementById('status').textContent = 'Hãy chọn một quân cờ trước';
+                return;
+            }
 
-        function showPossibleMoves(row, col) {
-            if (!pathfindingPiece || startPos || pieces.has(`${row},${col}`)) return;
-
-            clearHighlights();
-            const moves = getPieceMoves(pathfindingPiece, row, col);
-            moves.forEach(([dr, dc]) => {
-                const newRow = row + dr;
-                const newCol = col + dc;
-                if (isValidMove(newRow, newCol)) {
-                    board[newRow][newCol].classList.add('highlight');
+            if (!startPos) {
+                if (pathfindingPiece === '♙' && isPawnInvalidRow(row)) {
+                    document.getElementById('status').textContent = 
+                        'Không thể đặt tốt vào hàng ngang đầu hoặc cuối !';
+                    return;
                 }
-            });
+                startPos = { row, col };
+                addPiece(row, col, pathfindingPiece);
+                document.getElementById('status').textContent = 'Chọn điểm đích';
+            } else if (!endPos) {
+                endPos = { row, col };
+                board[row][col].classList.add('selected');
+                findPath();
+            }
         }
-
-        function clearHighlights() {
-    for (let i = 0; i < 8; i++) {
-        for (let j = 0; j < 8; j++) {
-            board[i][j].classList.remove('highlight');
-        }
-    }
-}
-function initializeBoard() {
-    const boardElement = document.getElementById('board');
-    boardElement.innerHTML = '';
-
-    for (let i = 0; i < 8; i++) {
-        board[i] = [];
-        for (let j = 0; j < 8; j++) {
-            const cell = document.createElement('div');
-            cell.className = `cell ${(i + j) % 2 === 0 ? 'white' : 'black'}`;
-            cell.dataset.row = i;
-            cell.dataset.col = j;
-            cell.addEventListener('click', () => cellClick(i, j));
-            cell.addEventListener('mouseover', () => showPossibleMoves(i, j));
-            cell.addEventListener('mouseout', clearHighlights);
-            boardElement.appendChild(cell);
-            board[i][j] = cell;
-        }
-    }
-}
-
 
         function findPath() {
+            clearPath();
             const queue = [[startPos.row, startPos.col, []]];
             const visited = new Set();
-            const moves = getPieceMoves(pathfindingPiece, startPos.row, startPos.col);
+            visited.add(`${startPos.row},${startPos.col}`);
 
             while (queue.length > 0) {
-                const [row, col, path] = queue.shift();
-                const key = `${row},${col}`;
+                const [currentRow, currentCol, path] = queue.shift();
 
-                if (row === endPos.row && col === endPos.col) {
-                    displayPath([...path, [row, col]]);
+                if (currentRow === endPos.row && currentCol === endPos.col) {
+                    const finalPath = [...path, [currentRow, currentCol]];
+                    displayPath(finalPath);
                     document.getElementById('status').textContent = 
-                        `Tìm thấy đường đi với ${path.length} bước!`;
+                        `Tìm thấy đường đi với ${finalPath.length -1} bước!`;
                     return;
                 }
 
-                if (!visited.has(key)) {
-                    visited.add(key);
+                const validMoves = getLimitedMoves(pathfindingPiece, currentRow, currentCol);
 
-                    for (const [dr, dc] of moves) {
-                        const newRow = row + dr;
-                        const newCol = col + dc;
+                for (const [dx, dy] of validMoves) {
+                    const newRow = currentRow + dx;
+                    const newCol = currentCol + dy;
+                    const newKey = `${newRow},${newCol}`;
 
-                        if (isValidMove(newRow, newCol) && 
-                            !visited.has(`${newRow},${newCol}`)) {
-                            queue.push([newRow, newCol, [...path, [row, col]]]);
-                        }
+                    if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8 && 
+                        !visited.has(newKey)) {
+                        visited.add(newKey);
+                        queue.push([newRow, newCol, [...path, [currentRow, currentCol]]]);
                     }
                 }
             }
@@ -430,209 +338,185 @@ function initializeBoard() {
         }
 
         function displayPath(path) {
-            for (const [row, col] of path) {
-                if ((row !== startPos.row || col !== startPos.col) && 
-                    (row !== endPos.row || col !== endPos.col)) {
-                    board[row][col].classList.add('path');
+            path.forEach(([row, col]) => {
+                board[row][col].classList.add('path');
+            });
+        }
+
+        function getLimitedMoves(piece, row, col) {
+            const allPossibleMoves = [];
+            const validMoves = [];
+
+            switch (piece) {
+                case '♕':
+                    for (let i = -1; i <= 1; i++) {
+                        for (let j = -1; j <= 1; j++) {
+                            if (i === 0 && j === 0) continue;
+                            let step = 1;
+                            while (true) {
+                                const newRow = row + i * step;
+                                const newCol = col + j * step;
+
+                                if (newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8) break;
+
+                                if (pieces.has(`${newRow},${newCol}`)) {
+                                    if (endPos && newRow === endPos.row && newCol === endPos.col) {
+                                        validMoves.push([i * step, j * step]);
+                                    }
+                                    break;
+                                }
+
+                                validMoves.push([i * step, j * step]);
+                                step++;
+                            }
+                        }
+                    }
+                    return validMoves;
+
+                case '♖':
+                    const directions = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+                    for (const [dx, dy] of directions) {
+                        let step = 1;
+                        while (true) {
+                            const newRow = row + dx * step;
+                            const newCol = col + dy * step;
+
+                            if (newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8) break;
+
+                            if (pieces.has(`${newRow},${newCol}`)) {
+                                if (endPos && newRow === endPos.row && newCol === endPos.col) {
+                                    validMoves.push([dx * step, dy * step]);
+                                }
+                                break;
+                            }
+
+                            validMoves.push([dx * step, dy * step]);
+                            step++;
+                        }
+                    }
+                    return validMoves;
+
+                case '♗':
+                    const diagonals = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+                    for (const [dx, dy] of diagonals) {
+                        let step = 1;
+                        while (true) {
+                            const newRow = row + dx * step;
+                            const newCol = col + dy * step;
+
+                            if (newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8) break;
+
+                            if (pieces.has(`${newRow},${newCol}`)) {
+                                if (endPos && newRow === endPos.row && newCol === endPos.col) {
+                                    validMoves.push([dx * step, dy * step]);
+                                }
+                                break;
+                            }
+
+                            validMoves.push([dx * step, dy * step]);
+                            step++;
+                        }
+                    }
+                    return validMoves;
+
+                case '♘':
+                    const knightMoves = [
+                        [-2, -1], [-2, 1], [-1, -2], [-1, 2],
+                        [1, -2], [1, 2], [2, -1], [2, 1]
+                    ];
+                    for (const [dx, dy] of knightMoves) {
+                        const newRow = row + dx;
+                        const newCol = col + dy;
+                        if (!pieces.has(`${newRow},${newCol}`) || 
+                            (endPos && newRow === endPos.row && newCol === endPos.col)) {
+                            validMoves.push([dx, dy]);
+                        }
+                    }
+                    return validMoves;
+
+                case '♙':
+                    if (!pieces.has(`${row-1},${col}`)) {
+                        validMoves.push([-1, 0]);
+                        if (row === 6 && !pieces.has(`${row-2},${col}`)) {
+                            validMoves.push([-2, 0]);
+                        }
+                    }
+                    return validMoves;
+
+                case '♔':
+                    for (let i = -1; i <= 1; i++) {
+                        for (let j = -1; j <= 1; j++) {
+                            if (i === 0 && j === 0) continue;
+                            const newRow = row + i;
+                            const newCol = col + j;
+
+                            if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
+                                if (!pieces.has(`${newRow},${newCol}`) || 
+                                    (endPos && newRow === endPos.row && newCol === endPos.col)) {
+                                    validMoves.push([i, j]);
+                                }
+                            }
+                        }
+                    }
+                    return validMoves;
+            }
+            return validMoves;
+        }
+
+        function showPossibleMoves(row, col) {
+            if (addingObstacles || !pathfindingPiece || startPos || pieces.has(`${row},${col}`)) return;
+            
+            if (pathfindingPiece === '♙' && isPawnInvalidRow(row)) return;
+            
+            clearHighlights();
+            const validMoves = getLimitedMoves(pathfindingPiece, row, col);
+            
+            validMoves.forEach(([dr, dc]) => {
+                const newRow = row + dr;
+                const newCol = col + dc;
+                if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
+                    board[newRow][newCol].classList.add('highlight');
+                }
+            });
+        }
+
+        function clearHighlights() {
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    board[i][j].classList.remove('highlight');
                 }
             }
         }
 
         function clearPath() {
-            if (startPos) {
-                const piece = pieces.get(`${startPos.row},${startPos.col}`);
-                if (piece) piece.remove();
-            }
             for (let i = 0; i < 8; i++) {
                 for (let j = 0; j < 8; j++) {
                     board[i][j].classList.remove('path', 'selected', 'highlight');
                 }
             }
-            startPos = null;
-            endPos = null;
-            if (pathfindingPiece) {
-                document.getElementById('status').textContent = 
-                    `Chọn điểm bắt đầu cho quân ${pathfindingPiece}`;
-            }
         }
 
         function resetBoard() {
-        pieces.forEach(piece => piece.remove());
-        pieces.clear();
-        pathfindingPiece = null;
-        addingObstacles = false;
-        startPos = null;
-        endPos = null;
-        clearPath();
-        
-        // Reset trạng thái nút thêm vật cản
-        if (obstacleButtonActive) {
-            toggleObstacles();
-        }
-        
-        document.getElementById('status').textContent = 'Chọn một quân cờ để tìm đường đi';
-    }
-
-    const style = document.createElement('style');
-    style.textContent = `
-        button.active {
-            background-color: #f44336 !important;
-        }
-        
-        button:hover {
-            opacity: 0.9;
-        }
-        
-        .controls button {
-            transition: all 0.3s ease;
-        }
-    `;
-    document.head.appendChild(style);
-
-        // Khởi tạo khi trang web được tải
-        window.onload = initializeBoard;
-        // Cập nhật các biến và hàm liên quan đến quân tốt
-function isPawnStartingRow(row) {
-    return row === 6; // Hàng thứ 2 từ dưới lên (index 6 trong mảng 0-7)
-}
-
-function isPawnInvalidRow(row) {
-    return row === 0 || row === 7; // Hàng đầu hoặc hàng cuối
-}
-
-function getPieceMoves(piece, row, col) {
-    const moves = [];
-    switch (piece) {
-        case '♔': // Vua
-            for (let dr = -1; dr <= 1; dr++) {
-                for (let dc = -1; dc <= 1; dc++) {
-                    if (dr !== 0 || dc !== 0) {
-                        moves.push([dr, dc]);
-                    }
-                }
+            pieces.forEach(piece => piece.remove());
+            pieces.clear();
+            pathfindingPiece = null;
+            addingObstacles = false;
+            startPos = null;
+            endPos = null;
+            clearPath();
+            if (obstacleButtonActive) {
+                toggleObstacles();
             }
-            break;
-        case '♕': // Hậu
-            for (let i = -7; i <= 7; i++) {
-                if (i !== 0) {
-                    moves.push([i, 0], [0, i], [i, i], [i, -i]);
-                }
-            }
-            break;
-        case '♖': // Xe
-            for (let i = -7; i <= 7; i++) {
-                if (i !== 0) {
-                    moves.push([i, 0], [0, i]);
-                }
-            }
-            break;
-        case '♗': // Tượng
-            for (let i = -7; i <= 7; i++) {
-                if (i !== 0) {
-                    moves.push([i, i], [i, -i]);
-                }
-            }
-            break;
-        case '♘': // Mã
-            moves.push(
-                [-2, -1], [-2, 1], [-1, -2], [-1, 2],
-                [1, -2], [1, 2], [2, -1], [2, 1]
-            );
-            break;
-        case '♙': // Tốt
-            moves.push([-1, 0]); // Luôn có thể đi 1 ô về phía trước
-            if (isPawnStartingRow(row)) { // Ở hàng 2 có thể đi thêm 1 ô
-                moves.push([-2, 0]);
-            }
-            break;
-    }
-    return moves;
-}
-
-function cellClick(row, col) {
-    if (addingObstacles) {
-        addPiece(row, col, '♟');
-        return;
-    }
-
-    if (!pathfindingPiece) {
-        document.getElementById('status').textContent = 'Hãy chọn một quân cờ trước';
-        return;
-    }
-
-    if (!startPos) {
-        // Kiểm tra vị trí không hợp lệ cho quân tốt
-        if (pathfindingPiece === '♙' && isPawnInvalidRow(row)) {
-            document.getElementById('status').textContent = 
-                'Không thể đặt tốt vào hàng ngang đầu hoặc cuối !';
-            return;
-        }
-        startPos = { row, col };
-        addPiece(row, col, pathfindingPiece);
-        document.getElementById('status').textContent = 'Chọn điểm đích';
-    } else if (!endPos) {
-        endPos = { row, col };
-        board[row][col].classList.add('selected');
-        findPath();
-    }
-}
-
-function showPossibleMoves(row, col) {
-    // Không hiển thị nước đi có thể trong chế độ thêm vật cản
-    if (addingObstacles) return;
-    
-    if (!pathfindingPiece || startPos || pieces.has(`${row},${col}`)) return;
-
-    // Không hiển thị nước đi có thể nếu tốt ở vị trí không hợp lệ
-    if (pathfindingPiece === '♙' && isPawnInvalidRow(row)) return;
-
-    clearHighlights();
-    const moves = getPieceMoves(pathfindingPiece, row, col);
-    moves.forEach(([dr, dc]) => {
-        const newRow = row + dr;
-        const newCol = col + dc;
-        if (isValidMove(newRow, newCol)) {
-            board[newRow][newCol].classList.add('highlight');
-        }
-    });
-}
-
-function findPath() {
-    const queue = [[startPos.row, startPos.col, []]];
-    const visited = new Set();
-    const moves = getPieceMoves(pathfindingPiece, startPos.row, startPos.col);
-
-    while (queue.length > 0) {
-        const [row, col, path] = queue.shift();
-        const key = `${row},${col}`;
-
-        if (row === endPos.row && col === endPos.col) {
-            displayPath([...path, [row, col]]);
-            document.getElementById('status').textContent = 
-                `Tìm thấy đường đi với ${path.length + 1} bước!`;
-            return;
+            document.getElementById('status').textContent = 'Chọn một quân cờ để tìm đường đi';
         }
 
-        if (!visited.has(key)) {
-            visited.add(key);
-
-            // Lấy các nước đi có thể từ vị trí hiện tại
-            const currentMoves = getPieceMoves(pathfindingPiece, row, col);
-            for (const [dr, dc] of currentMoves) {
-                const newRow = row + dr;
-                const newCol = col + dc;
-
-                if (isValidMove(newRow, newCol) && 
-                    !visited.has(`${newRow},${newCol}`)) {
-                    queue.push([newRow, newCol, [...path, [row, col]]]);
-                }
-            }
+        function isPawnInvalidRow(row) {
+            return row === 0 || row === 7;
         }
-    }
 
-    document.getElementById('status').textContent = 'Không tìm thấy đường đi!';
-}
+        window.onload = function() {
+            initializeBoard();
+        };
     </script>
-    
 </body>
 </html>
